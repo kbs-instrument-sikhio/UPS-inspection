@@ -194,6 +194,8 @@
     background:var(--card); border:1px solid var(--border); border-radius:12px;
     padding:11px 13px; margin-bottom:8px; display:flex; align-items:center; gap:10px;
   }
+  .checklist-item.clickable{ cursor:pointer; -webkit-tap-highlight-color:rgba(59,111,224,0.15); }
+  .checklist-item.clickable:active{ background:#eef2fe; border-color:var(--blue); }
   .checklist-item .meta{ flex:1; min-width:0; }
   .checklist-item .meta .name{ font-size:13.5px; font-weight:600; }
   .checklist-item .meta .shift{ font-size:12px; color:var(--muted); margin-top:1px; }
@@ -246,17 +248,18 @@
   <main>
 
     <!-- ===== TODAY VIEW ===== -->
-    <section id="view-today" class="view">
+    <section id="view-today" class="view active">
       <div class="view-header">
         <h2>สรุปวันนี้</h2>
         <button class="btn-refresh" onclick="loadToday()">รีเฟรช</button>
       </div>
-      <div id="todayDate" class="hint-small" style="margin-bottom:10px;"></div>
+      <div id="todayDate" class="hint-small" style="margin-bottom:2px;"></div>
+      <div class="hint-small" style="margin-bottom:10px;">แตะรายการที่ยัง "ยังไม่ตรวจ" เพื่อไปกรอกข้อมูลของ UPS ตัวนั้นได้ทันที</div>
       <div id="todayContent"><div class="empty-state">กำลังโหลด...</div></div>
     </section>
 
     <!-- ===== FORM VIEW ===== -->
-    <section id="view-form" class="view active">
+    <section id="view-form" class="view">
       <div class="card">
         <h2><span class="dot">📋</span> ข้อมูลการตรวจ</h2>
 
@@ -298,7 +301,7 @@
 
         <div class="field">
           <div class="check-row">
-            <input type="checkbox" id="fVisual" checked onchange="onVisualChange()">
+            <input type="checkbox" id="fVisual" onchange="onVisualChange()">
             <div class="txt">
               <strong>VISUAL CHECK ปกติ</strong>
               <span>หากไม่ติ๊กถูก ให้ระบุรายละเอียดในหมายเหตุ</span>
@@ -352,11 +355,11 @@
   </main>
 
   <nav class="bottomnav">
-    <button id="nav-today" onclick="showView('today')">
+    <button id="nav-today" class="active" onclick="showView('today')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       วันนี้
     </button>
-    <button id="nav-form" class="active" onclick="showView('form')">
+    <button id="nav-form" onclick="showView('form')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
       กรอกข้อมูล
     </button>
@@ -469,9 +472,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('fDate').value = todayStr();
   document.getElementById('todayDate').textContent = 'วันที่ ' + todayStr();
+  onVisualChange(); // VISUAL CHECK เริ่มต้นแบบไม่ติ๊ก ให้ผู้ใช้ติ๊กเอง จึงตั้งป้ายหมายเหตุให้ตรงสถานะเริ่มต้น
 
   loadMasterData();
+  loadToday(); // หน้าเริ่มต้นของแอปคือแท็บ "วันนี้" จึงโหลดข้อมูลทันทีตั้งแต่เปิดแอป
+
+  // แตะรายการ "ยังไม่ตรวจ" ในแท็บวันนี้ เพื่อกระโดดไปหน้ากรอกข้อมูล พร้อมเลือก
+  // พื้นที่/อาคาร, ชื่อ UPS และ S/N ให้อัตโนมัติตามรายการที่แตะ
+  document.getElementById('todayContent').addEventListener('click', function (e) {
+    const item = e.target.closest('.checklist-item.clickable');
+    if (!item) return;
+    goToForm(item.dataset.building, item.dataset.ups, item.dataset.serial, item.dataset.shift);
+  });
 });
+
+function escapeHtml_(str){
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// ไปหน้า "กรอกข้อมูล" พร้อมเลือกพื้นที่/อาคาร, ชื่อ UPS, S/N และกะ ให้อัตโนมัติ
+// ใช้เมื่อแตะรายการ "ยังไม่ตรวจ" จากแท็บ "วันนี้"
+function goToForm(building, upsName, serial, shift){
+  showView('form');
+  const buildingSel = document.getElementById('fBuilding');
+  buildingSel.value = building;
+  onBuildingChange(); // จะรีเซ็ต fSerial ด้วย จึงต้องตั้งค่า fSerial ทีหลังบรรทัดนี้
+  const upsSel = document.getElementById('fUps');
+  upsSel.value = upsName;
+  document.getElementById('fSerial').value = serial || '';
+  const shiftSel = document.getElementById('fShift');
+  if (shift) shiftSel.value = shift;
+  // เริ่มค่าผลตรวจใหม่ทั้งหมด ไม่ดึงค่าจากการกรอกครั้งก่อนติดมาด้วย
+  document.getElementById('fVisual').checked = false;
+  onVisualChange();
+  document.getElementById('fInput').value = '';
+  document.getElementById('fOutput').value = '';
+  document.getElementById('fSignature').value = '';
+  document.getElementById('fRemarks').value = '';
+  setStatus(null, '');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 function onBuildingChange(){
   const building = document.getElementById('fBuilding').value;
@@ -531,7 +575,7 @@ function resetForm(){
   document.getElementById('fSerial').value = '';
   document.getElementById('fDate').value = todayStr();
   document.getElementById('fShift').selectedIndex = 0;
-  document.getElementById('fVisual').checked = true;
+  document.getElementById('fVisual').checked = false;
   onVisualChange();
   document.getElementById('fInput').value = '';
   document.getElementById('fOutput').value = '';
@@ -615,12 +659,17 @@ async function loadToday(){
     const done = new Set(data.rows.map(r => String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()));
     let html = '';
     Object.keys(MASTER.byBuilding).forEach(building => {
-      html += '<div class="group-title">' + building + '</div>';
+      html += '<div class="group-title">' + escapeHtml_(building) + '</div>';
       MASTER.byBuilding[building].forEach(u => {
         CONFIG.shifts.forEach(shift => {
           const isDone = done.has(building.trim() + '|' + u.upsName.trim() + '|' + shift.trim());
-          html += '<div class="checklist-item"><div class="meta"><div class="name">' + u.upsName +
-            '</div><div class="shift">' + shift + '</div></div><span class="badge ' +
+          const attrs = isDone ? '' :
+            ' data-building="' + escapeHtml_(building) + '"' +
+            ' data-ups="' + escapeHtml_(u.upsName) + '"' +
+            ' data-serial="' + escapeHtml_(u.serial || '') + '"' +
+            ' data-shift="' + escapeHtml_(shift) + '"';
+          html += '<div class="checklist-item' + (isDone ? '' : ' clickable') + '"' + attrs + '><div class="meta"><div class="name">' + escapeHtml_(u.upsName) +
+            '</div><div class="shift">' + escapeHtml_(shift) + '</div></div><span class="badge ' +
             (isDone ? 'done">ตรวจแล้ว' : 'pending">ยังไม่ตรวจ') + '</span></div>';
         });
       });
