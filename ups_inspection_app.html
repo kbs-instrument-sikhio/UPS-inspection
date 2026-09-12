@@ -330,6 +330,20 @@
           <textarea id="fRemarks" placeholder="ระบุความผิดปกติหรือรายละเอียดเพิ่มเติม"></textarea>
         </div>
 
+        <div class="field">
+          <label>แนบรูปถ่ายหน้างาน <span class="req">*</span></label>
+          <div class="hint-small" style="margin-bottom:8px;">ต้องถ่ายรูปสดผ่านกล้องตอนนี้เท่านั้น เลือกรูปเก่าจากคลังภาพไม่ได้</div>
+          <video id="cameraVideo" autoplay playsinline muted style="display:none; width:100%; border-radius:10px; background:#000; margin-bottom:8px;"></video>
+          <canvas id="cameraCanvas" style="display:none;"></canvas>
+          <img id="photoPreview" style="display:none; width:100%; border-radius:10px; margin-bottom:8px;">
+          <div class="btnbar">
+            <button type="button" class="btn-cancel" id="btnOpenCamera" onclick="openCamera()">📷 เปิดกล้องถ่ายรูป</button>
+            <button type="button" class="btn-submit" id="btnCapture" style="display:none;" onclick="capturePhoto()">ถ่ายภาพ</button>
+          </div>
+          <button type="button" class="btn-refresh" id="btnRetake" style="display:none; margin-top:8px; width:100%; border-radius:10px; padding:10px;" onclick="retakePhoto()">ถ่ายใหม่</button>
+          <div id="cameraError" class="status-msg err" style="display:none; margin-top:8px;"></div>
+        </div>
+
         <div id="statusMsg" class="status-msg"></div>
 
         <div class="btnbar" style="margin-top:14px;">
@@ -513,8 +527,93 @@ function goToForm(building, upsName, serial, shift){
   document.getElementById('fOutput').value = '';
   document.getElementById('fSignature').value = '';
   document.getElementById('fRemarks').value = '';
+  resetPhotoCapture();
   setStatus(null, '');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ---------- กล้องถ่ายรูปหน้างาน (บังคับถ่ายสด ไม่ให้เลือกจากคลังภาพ) ---------- */
+let cameraStream = null;
+let photoDataUrl = null; // base64 JPEG ของรูปที่ถ่าย (ยังไม่ได้ส่ง จะส่งตอนกด "บันทึกลง Google Sheet")
+
+function showCameraError(msg){
+  const el = document.getElementById('cameraError');
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+function hideCameraError(){
+  document.getElementById('cameraError').style.display = 'none';
+}
+
+function stopCameraStream(){
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+}
+
+async function openCamera(){
+  hideCameraError();
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showCameraError('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง (ต้องเปิดผ่าน HTTPS และเบราว์เซอร์ที่รองรับ)');
+    return;
+  }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    });
+  } catch (err) {
+    showCameraError('เปิดกล้องไม่สำเร็จ กรุณาอนุญาตให้เว็บนี้ใช้กล้องในเบราว์เซอร์ของคุณ');
+    return;
+  }
+  const video = document.getElementById('cameraVideo');
+  video.srcObject = cameraStream;
+  video.style.display = 'block';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('btnOpenCamera').style.display = 'none';
+  document.getElementById('btnCapture').style.display = '';
+  document.getElementById('btnRetake').style.display = 'none';
+  photoDataUrl = null;
+}
+
+function capturePhoto(){
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.getElementById('cameraCanvas');
+  const maxW = 1280;
+  const scale = video.videoWidth > maxW ? maxW / video.videoWidth : 1;
+  canvas.width = Math.round(video.videoWidth * scale);
+  canvas.height = Math.round(video.videoHeight * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  photoDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+  stopCameraStream();
+  video.style.display = 'none';
+  const preview = document.getElementById('photoPreview');
+  preview.src = photoDataUrl;
+  preview.style.display = 'block';
+  document.getElementById('btnCapture').style.display = 'none';
+  document.getElementById('btnRetake').style.display = '';
+}
+
+function retakePhoto(){
+  photoDataUrl = null;
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('btnRetake').style.display = 'none';
+  openCamera();
+}
+
+function resetPhotoCapture(){
+  stopCameraStream();
+  photoDataUrl = null;
+  hideCameraError();
+  document.getElementById('cameraVideo').style.display = 'none';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('photoPreview').src = '';
+  document.getElementById('btnOpenCamera').style.display = '';
+  document.getElementById('btnCapture').style.display = 'none';
+  document.getElementById('btnRetake').style.display = 'none';
 }
 
 function onBuildingChange(){
@@ -558,6 +657,8 @@ function showView(name){
     document.getElementById('view-' + v).classList.toggle('active', v === name);
     document.getElementById('nav-' + v).classList.toggle('active', v === name);
   });
+  // ปิดกล้อง (ถ้ากำลังเปิดค้างอยู่) ทุกครั้งที่ออกจากแท็บ "กรอกข้อมูล" กันแบตหมด/เป็นการรบกวนความเป็นส่วนตัว
+  if (name !== 'form') stopCameraStream();
   if (name === 'today') loadToday();
   if (name === 'history') loadHistory();
 }
@@ -581,6 +682,7 @@ function resetForm(){
   document.getElementById('fOutput').value = '';
   document.getElementById('fSignature').value = '';
   document.getElementById('fRemarks').value = '';
+  resetPhotoCapture();
   setStatus(null, '');
 }
 
@@ -604,6 +706,7 @@ async function submitForm(){
   if (isNaN(Number(inputV)) || isNaN(Number(outputV))) return setStatus('err', 'INPUT (V) และ OUTPUT (V) ต้องเป็นตัวเลขเท่านั้น');
   if (!signature) return setStatus('err', 'กรุณาใส่ชื่อผู้ตรวจเช็ค');
   if (!visualCheck && !remarks) return setStatus('err', 'VISUAL CHECK ไม่ปกติ กรุณาระบุรายละเอียดในหมายเหตุ');
+  if (!photoDataUrl) return setStatus('err', 'กรุณาถ่ายรูปหน้างานก่อนบันทึก (ต้องถ่ายสดผ่านกล้อง)');
 
   if (!isConfigured()) return setStatus('err', 'ยังไม่ได้ตั้งค่า Web App URL — ดูคู่มือติดตั้ง.md');
 
@@ -618,13 +721,17 @@ async function submitForm(){
       body: JSON.stringify({
         token: CONFIG.token,
         building, upsName, serial, date, shift,
-        visualCheck, inputV, outputV, signature, remarks
+        visualCheck, inputV, outputV, signature, remarks,
+        photo: photoDataUrl
       })
     });
     const data = await res.json();
     if (data.result === 'success') {
       setStatus('ok', '✓ บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว');
-      setTimeout(() => resetForm(), 1400);
+      setTimeout(() => {
+        resetForm();
+        showView('today'); // บันทึกเสร็จแล้วกลับไปหน้า "วันนี้" ให้เห็นสถานะล่าสุดทันที
+      }, 1400);
     } else {
       setStatus('err', 'บันทึกไม่สำเร็จ: ' + (data.message || 'ไม่ทราบสาเหตุ'));
     }
@@ -712,16 +819,17 @@ async function loadHistory(){
     }
     container.innerHTML = rows.map(r => (
       '<div class="history-card">' +
-        '<div class="top"><div><div class="title">' + r.upsName + '</div>' +
-        '<div class="sub">' + r.building + ' • ' + r.date + ' • ' + r.shift + '</div></div>' +
-        '<span class="badge ' + (r.visualCheck === 'ปกติ' ? 'done' : 'pending') + '">' + r.visualCheck + '</span></div>' +
+        '<div class="top"><div><div class="title">' + escapeHtml_(r.upsName) + '</div>' +
+        '<div class="sub">' + escapeHtml_(r.building) + ' • ' + escapeHtml_(r.date) + ' • ' + escapeHtml_(r.shift) + '</div></div>' +
+        '<span class="badge ' + (r.visualCheck === 'ปกติ' ? 'done' : 'pending') + '">' + escapeHtml_(r.visualCheck) + '</span></div>' +
         '<div class="grid">' +
-          '<div><span>S/N: </span>' + (r.serial || '-') + '</div>' +
-          '<div><span>ผู้ตรวจ: </span>' + (r.signature || '-') + '</div>' +
-          '<div><span>Input: </span>' + r.inputV + ' V</div>' +
-          '<div><span>Output: </span>' + r.outputV + ' V</div>' +
+          '<div><span>S/N: </span>' + escapeHtml_(r.serial || '-') + '</div>' +
+          '<div><span>ผู้ตรวจ: </span>' + escapeHtml_(r.signature || '-') + '</div>' +
+          '<div><span>Input: </span>' + escapeHtml_(r.inputV) + ' V</div>' +
+          '<div><span>Output: </span>' + escapeHtml_(r.outputV) + ' V</div>' +
         '</div>' +
-        (r.remarks ? '<div class="remarks">' + r.remarks + '</div>' : '') +
+        (r.remarks ? '<div class="remarks">' + escapeHtml_(r.remarks) + '</div>' : '') +
+        (r.photoUrl ? '<div style="margin-top:8px;"><a href="' + escapeHtml_(r.photoUrl) + '" target="_blank" rel="noopener" style="color:var(--blue); font-weight:600; font-size:12.5px; text-decoration:none;">📷 ดูรูปถ่ายหน้างาน</a></div>' : '') +
       '</div>'
     )).join('');
   } catch (err) {
