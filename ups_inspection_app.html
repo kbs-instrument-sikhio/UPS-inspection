@@ -405,7 +405,8 @@ async function fetchMasterData(){
     const url = new URL(CONFIG.webAppUrl);
     url.searchParams.set('token', CONFIG.token);
     url.searchParams.set('mode', 'master');
-    const res = await fetch(url.toString());
+    url.searchParams.set('_', Date.now()); // กันเบราว์เซอร์/Google แคชผลลัพธ์เก่า
+    const res = await fetch(url.toString(), { cache: 'no-store' });
     const data = await res.json();
     if (data.result !== 'success') return false;
     MASTER.list = data.items || [];
@@ -604,19 +605,20 @@ async function loadToday(){
     const url = new URL(CONFIG.webAppUrl);
     url.searchParams.set('token', CONFIG.token);
     url.searchParams.set('date', todayStr());
-    const res = await fetch(url.toString());
+    url.searchParams.set('_', Date.now()); // กันเบราว์เซอร์/Google แคชผลลัพธ์เก่า
+    const res = await fetch(url.toString(), { cache: 'no-store' });
     const data = await res.json();
     if (data.result !== 'success') {
       container.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่สำเร็จ: ' + (data.message || '') + '</div>';
       return;
     }
-    const done = new Set(data.rows.map(r => r.building + '|' + r.upsName + '|' + r.shift));
+    const done = new Set(data.rows.map(r => String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()));
     let html = '';
     Object.keys(MASTER.byBuilding).forEach(building => {
       html += '<div class="group-title">' + building + '</div>';
       MASTER.byBuilding[building].forEach(u => {
         CONFIG.shifts.forEach(shift => {
-          const isDone = done.has(building + '|' + u.upsName + '|' + shift);
+          const isDone = done.has(building.trim() + '|' + u.upsName.trim() + '|' + shift.trim());
           html += '<div class="checklist-item"><div class="meta"><div class="name">' + u.upsName +
             '</div><div class="shift">' + shift + '</div></div><span class="badge ' +
             (isDone ? 'done">ตรวจแล้ว' : 'pending">ยังไม่ตรวจ') + '</span></div>';
@@ -646,7 +648,8 @@ async function loadHistory(){
     url.searchParams.set('token', CONFIG.token);
     url.searchParams.set('limit', '100');
     if (dateFilter) url.searchParams.set('date', dateFilter);
-    const res = await fetch(url.toString());
+    url.searchParams.set('_', Date.now()); // กันเบราว์เซอร์/Google แคชผลลัพธ์เก่า
+    const res = await fetch(url.toString(), { cache: 'no-store' });
     const data = await res.json();
     if (data.result !== 'success') {
       container.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่สำเร็จ: ' + (data.message || '') + '</div>';
