@@ -300,16 +300,16 @@
   .check-card .check-sub{ font-size:12px; color:var(--muted); margin-top:2px; }
   .check-card .badge{ flex:none; }
 
-  .history-card{
-    background:var(--card); border:1px solid var(--border); border-radius:12px;
-    padding:13px; margin-bottom:10px;
-  }
-  .history-card .top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px; }
-  .history-card .top .title{ font-size:14px; font-weight:700; }
-  .history-card .top .sub{ font-size:12px; color:var(--muted); margin-top:2px; }
-  .history-card .grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; font-size:12.5px; }
-  .history-card .grid div span{ color:var(--muted); }
-  .history-card .remarks{ margin-top:8px; font-size:12.5px; color:var(--text); background:var(--field); border-radius:8px; padding:8px 10px; }
+  /* การ์ด "ยังไม่มีข้อมูล" ในหน้าตรวจสอบข้อมูล — พนักงานยังไม่ได้บันทึกผลตรวจของรายการนี้ ดูอย่างเดียว แตะไม่ได้ */
+  .check-card.none{ background:#f4f5f7; border-color:#e5e7eb; }
+  .check-card.none .check-name{ color:var(--muted); }
+  .badge.none{ background:#eceff3; color:#8b93a3; }
+
+  /* แถวข้อมูลแบบดูอย่างเดียว (read-only) ในหน้ารายละเอียดของแท็บ "ตรวจสอบข้อมูล" */
+  .ro-field{ padding:9px 0; border-bottom:1px solid var(--border); }
+  .ro-field:last-child{ border-bottom:none; }
+  .ro-field .ro-label{ font-size:11.5px; color:var(--muted); font-weight:600; margin-bottom:2px; }
+  .ro-field .ro-value{ font-size:14px; color:var(--text); font-weight:600; }
 
   .empty-state{ text-align:center; color:var(--muted); font-size:13px; padding:30px 10px; }
 
@@ -472,17 +472,64 @@
       </div>
     </section>
 
-    <!-- ===== HISTORY VIEW ===== -->
-    <section id="view-history" class="view">
-      <div class="view-header">
-        <h2>ประวัติการตรวจ</h2>
-        <button class="btn-refresh" onclick="loadHistory()">รีเฟรช</button>
+    <!-- ===== VERIFY (ตรวจสอบข้อมูล) VIEW — สำหรับหัวหน้าชุดตรวจทานผลที่พนักงานบันทึกมา ===== -->
+    <section id="view-verify" class="view">
+
+      <!-- แสดงหน้ารายการ (เหมือนหน้า "วันนี้") จนกว่าจะแตะเข้าไปดูรายละเอียดของรายการใดรายการหนึ่ง -->
+      <div id="verifyListWrap">
+        <div class="today-date-row">
+          <div class="today-date-picker">
+            <span id="verifyDateText">📅 วันที่: ...</span>
+            <span class="chevron">▾</span>
+            <input type="date" id="verifyDateInput" onchange="onVerifyDateChange()">
+          </div>
+          <button type="button" class="btn-today-jump" id="btnVerifyJumpToday" style="display:none;" onclick="verifyJumpToday()">กลับไปวันนี้</button>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-box done">
+            <div class="stat-top"><span class="stat-icon">✓</span><span class="stat-label">ตรวจสอบแล้ว</span></div>
+            <div class="stat-value" id="verifyStatDoneValue">0/0</div>
+          </div>
+          <div class="stat-box pending">
+            <div class="stat-top"><span class="stat-icon">!</span><span class="stat-label">รอตรวจสอบ</span></div>
+            <div class="stat-value" id="verifyStatPendingValue">0</div>
+          </div>
+        </div>
+
+        <div class="pill-row" id="verifyBuildingPills"></div>
+        <div class="pill-row" id="verifyShiftPills"></div>
+
+        <div class="hint-small" style="margin:0 2px 10px;">แตะรายการที่ "รอตรวจสอบ" เพื่อดูผลตรวจของพนักงานแล้วยืนยันการตรวจสอบของหัวหน้าชุด</div>
+
+        <div id="verifyContent"><div class="empty-state">กำลังโหลด...</div></div>
       </div>
-      <div class="filters">
-        <input type="date" id="hDate" onchange="loadHistory()">
-        <select id="hBuilding" onchange="loadHistory()"></select>
+
+      <!-- หน้ารายละเอียด (ดูอย่างเดียว + ช่องยืนยันของหัวหน้าชุด) — ซ่อนไว้ก่อน แตะรายการถึงจะแสดง -->
+      <div id="verifyDetailWrap" style="display:none;">
+        <button type="button" class="btn-refresh" style="margin-bottom:12px;" onclick="closeVerifyDetail()">← กลับไปหน้ารายการ</button>
+
+        <div class="card">
+          <h2><span class="dot">📋</span> ข้อมูลที่พนักงานบันทึกไว้ (ดูอย่างเดียว แก้ไขไม่ได้)</h2>
+          <div id="verifyDetailGrid"></div>
+          <div class="field" id="verifyPhotoWrap" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="card">
+          <h2><span class="dot">✓</span> ยืนยันการตรวจสอบของหัวหน้าชุด</h2>
+          <div id="verifyAlreadyNote" class="hint-small" style="display:none; margin-bottom:10px;"></div>
+          <div class="field">
+            <label>ชื่อหัวหน้าชุดผู้ตรวจสอบ <span class="req">*</span></label>
+            <input type="text" id="verifierName" placeholder="พิมพ์ชื่อผู้ตรวจสอบ">
+          </div>
+          <div id="verifyStatusMsg" class="status-msg"></div>
+          <div class="btnbar" style="margin-top:14px;">
+            <button class="btn-cancel" onclick="closeVerifyDetail()">ยกเลิก</button>
+            <button class="btn-submit" id="verifyConfirmBtn" onclick="submitVerify()">ยืนยันข้อมูลการตรวจสอบ</button>
+          </div>
+        </div>
       </div>
-      <div id="historyContent"><div class="empty-state">กำลังโหลด...</div></div>
+
     </section>
 
   </main>
@@ -496,9 +543,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
       กรอกข้อมูล
     </button>
-    <button id="nav-history" onclick="showView('history')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
-      ประวัติ
+    <button id="nav-verify" onclick="showView('verify')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+      ตรวจสอบ
     </button>
   </nav>
 
@@ -627,10 +674,8 @@ function renderBuildingOptions(selectEl, placeholderText, keepValue){
 
 async function loadMasterData(){
   const buildingSel = document.getElementById('fBuilding');
-  const hBuilding = document.getElementById('hBuilding');
   if (!isConfigured()) {
     buildingSel.innerHTML = '<option value="">ยังไม่ได้ตั้งค่า Web App URL</option>';
-    hBuilding.innerHTML = '<option value="">ทุกพื้นที่/อาคาร</option>';
     return;
   }
   buildingSel.innerHTML = '<option value="">กำลังโหลดรายชื่อ...</option>';
@@ -640,7 +685,6 @@ async function loadMasterData(){
     return;
   }
   renderBuildingOptions(buildingSel, 'เลือกพื้นที่หรืออาคารก่อน', true);
-  renderBuildingOptions(hBuilding, 'ทุกพื้นที่/อาคาร', true);
 }
 
 /* ---------- init ---------- */
@@ -683,6 +727,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('.pill'); if (!btn) return;
     uiState.shift = btn.dataset.shift || '';
     renderTodayList();
+  });
+
+  // แตะรายการ "รอตรวจสอบ"/"ตรวจสอบแล้ว" ในแท็บ "ตรวจสอบข้อมูล" เพื่อเปิดหน้ารายละเอียด (ดูอย่างเดียว)
+  document.getElementById('verifyContent').addEventListener('click', function (e) {
+    const item = e.target.closest('.check-card.clickable');
+    if (!item) return;
+    openVerifyDetail(item.dataset.rowindex);
+  });
+  document.getElementById('verifyBuildingPills').addEventListener('click', function (e) {
+    const btn = e.target.closest('.pill'); if (!btn) return;
+    verifyState.building = btn.dataset.building || '';
+    renderVerifyList();
+  });
+  document.getElementById('verifyShiftPills').addEventListener('click', function (e) {
+    const btn = e.target.closest('.pill'); if (!btn) return;
+    verifyState.shift = btn.dataset.shift || '';
+    renderVerifyList();
   });
 });
 
@@ -841,14 +902,14 @@ function onVisualChange(){
 
 /* ---------- tabs ---------- */
 function showView(name){
-  ['today','form','history'].forEach(v => {
+  ['today','form','verify'].forEach(v => {
     document.getElementById('view-' + v).classList.toggle('active', v === name);
     document.getElementById('nav-' + v).classList.toggle('active', v === name);
   });
   // ปิดกล้อง (ถ้ากำลังเปิดค้างอยู่) ทุกครั้งที่ออกจากแท็บ "กรอกข้อมูล" กันแบตหมด/เป็นการรบกวนความเป็นส่วนตัว
   if (name !== 'form') stopCameraStream();
   if (name === 'today') loadToday();
-  if (name === 'history') loadHistory();
+  if (name === 'verify') loadVerify();
 }
 
 // ปุ่มรีเฟรชวงกลมที่หัวแอป — รีเฟรชเฉพาะแท็บที่กำลังเปิดอยู่
@@ -858,7 +919,7 @@ function refreshCurrentView(){
   const done = () => btn.classList.remove('spin');
   let task;
   if (document.getElementById('view-today').classList.contains('active')) task = loadToday();
-  else if (document.getElementById('view-history').classList.contains('active')) task = loadHistory();
+  else if (document.getElementById('view-verify').classList.contains('active')) task = loadVerify();
   else task = loadMasterData();
   Promise.resolve(task).finally(done);
 }
@@ -1049,23 +1110,123 @@ async function loadToday(){
   }
 }
 
-/* ---------- history view ---------- */
-async function loadHistory(){
-  const container = document.getElementById('historyContent');
+/* ---------- verify (ตรวจสอบข้อมูล) view — หัวหน้าชุดตรวจทานผลที่พนักงานบันทึกมาแล้วยืนยัน ---------- */
+let verifyState = { building: '', shift: '', date: todayStr() }; // ตัวกรองของแท็บนี้ — แยกจากแท็บ "วันนี้" โดยเฉพาะ
+let verifyRowsCache = null; // แคชผลตรวจของ verifyState.date ที่ดึงมาล่าสุด
+let verifyCurrentRow = null; // แถวที่กำลังเปิดดูอยู่ในหน้ารายละเอียดตอนนี้ (ถ้ามี)
+
+function updateVerifyDateLabel(){
+  document.getElementById('verifyDateText').textContent = '📅 วันที่: ' + formatThaiDate(verifyState.date);
+  const input = document.getElementById('verifyDateInput');
+  input.max = todayStr(); // เลือกดูวันที่ล่วงหน้าไม่ได้
+  input.value = verifyState.date;
+  document.getElementById('btnVerifyJumpToday').style.display = (verifyState.date === todayStr()) ? 'none' : '';
+}
+function onVerifyDateChange(){
+  const val = document.getElementById('verifyDateInput').value;
+  verifyState.date = val || todayStr();
+  updateVerifyDateLabel();
+  loadVerify();
+}
+function verifyJumpToday(){
+  verifyState.date = todayStr();
+  updateVerifyDateLabel();
+  loadVerify();
+}
+
+function renderVerifyBuildingPills(){
+  const wrap = document.getElementById('verifyBuildingPills');
+  const buildings = Object.keys(MASTER.byBuilding);
+  let html = '<button type="button" class="pill' + (verifyState.building === '' ? ' active' : '') + '" data-building="">ทั้งหมด</button>';
+  buildings.forEach(b => {
+    html += '<button type="button" class="pill' + (verifyState.building === b ? ' active' : '') + '" data-building="' + escapeHtml_(b) + '">' + escapeHtml_(b) + '</button>';
+  });
+  wrap.innerHTML = html;
+}
+function renderVerifyShiftPills(){
+  const wrap = document.getElementById('verifyShiftPills');
+  let html = '';
+  CONFIG.shifts.forEach(s => {
+    html += '<button type="button" class="pill shift-pill' + (verifyState.shift === s ? ' active' : '') + '" data-shift="' + escapeHtml_(s) + '">' + escapeHtml_(s) + '</button>';
+  });
+  wrap.innerHTML = html;
+}
+
+// เรนเดอร์รายการของแท็บ "ตรวจสอบข้อมูล" — สำหรับ UPS แต่ละตัวในกะที่เลือก มี 3 สถานะได้:
+// 1) พนักงานยังไม่ได้บันทึกผลตรวจ (ไม่มีแถวใน log)      -> "ยังไม่มีข้อมูล" (สีเทา, แตะไม่ได้)
+// 2) พนักงานบันทึกแล้ว แต่หัวหน้าชุดยังไม่ยืนยัน           -> "รอตรวจสอบ" (สีแดง/ชมพู, แตะเข้าไปดูได้)
+// 3) หัวหน้าชุดยืนยันแล้ว (มีค่าในคอลัมน์ verifiedBy)      -> "ตรวจสอบแล้ว" (สีเขียว, แตะเข้าไปดูซ้ำได้)
+function renderVerifyList(){
+  renderVerifyBuildingPills();
+  renderVerifyShiftPills();
+
+  const container = document.getElementById('verifyContent');
+  if (!verifyRowsCache) return;
+
+  const shift = verifyState.shift || CONFIG.shifts[0] || '';
+  const rowMap = {}; // key: building|upsName|shift -> แถวล่าสุดที่ตรงกัน
+  verifyRowsCache.forEach(r => {
+    rowMap[String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()] = r;
+  });
+
+  let totalSubmitted = 0, totalVerified = 0;
+  Object.keys(MASTER.byBuilding).forEach(b => {
+    MASTER.byBuilding[b].forEach(u => {
+      const row = rowMap[b.trim() + '|' + u.upsName.trim() + '|' + shift.trim()];
+      if (row) {
+        totalSubmitted++;
+        if (row.verifiedBy) totalVerified++;
+      }
+    });
+  });
+  document.getElementById('verifyStatDoneValue').textContent = totalVerified + '/' + totalSubmitted;
+  document.getElementById('verifyStatPendingValue').textContent = String(totalSubmitted - totalVerified);
+
+  const buildingsToShow = verifyState.building ? [verifyState.building] : Object.keys(MASTER.byBuilding);
+  const showBuildingTag = !verifyState.building;
+
+  let html = '';
+  buildingsToShow.forEach(b => {
+    (MASTER.byBuilding[b] || []).forEach(u => {
+      const key = b.trim() + '|' + u.upsName.trim() + '|' + shift.trim();
+      const row = rowMap[key];
+      if (!row) {
+        html += '<div class="check-card none"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
+          (showBuildingTag ? '<div class="check-sub">' + escapeHtml_(b) + '</div>' : '') +
+          '</div><span class="badge none">ยังไม่มีข้อมูล</span></div>';
+      } else if (row.verifiedBy) {
+        html += '<div class="check-card done clickable" data-rowindex="' + row.rowIndex + '"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
+          '<div class="check-sub">' + (showBuildingTag ? escapeHtml_(b) + ' • ' : '') + escapeHtml_(shift) + '</div></div>' +
+          '<span class="badge done">✓ ตรวจสอบแล้ว</span></div>';
+      } else {
+        html += '<div class="check-card pending clickable" data-rowindex="' + row.rowIndex + '">' +
+          '<div class="check-icon">🏢</div>' +
+          '<div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
+          (showBuildingTag ? '<div class="check-sub">' + escapeHtml_(b) + '</div>' : '') +
+          '</div><span class="badge pending">⏳ รอตรวจสอบ</span></div>';
+      }
+    });
+  });
+  container.innerHTML = html || '<div class="empty-state">ยังไม่มีรายชื่อ UPS ในชีตต้นแบบ (หรืออาคารที่เลือกไม่มี UPS)</div>';
+}
+
+async function loadVerify(){
+  closeVerifyDetail(); // สลับแท็บมาใหม่ ให้กลับไปที่หน้ารายการก่อนเสมอ
+  const container = document.getElementById('verifyContent');
+  updateVerifyDateLabel();
   if (!isConfigured()) {
     container.innerHTML = '<div class="empty-state">ยังไม่ได้ตั้งค่า Web App URL — ดูคู่มือติดตั้ง.md</div>';
     return;
   }
   container.innerHTML = '<div class="empty-state">กำลังโหลด...</div>';
-  const masterOk = await fetchMasterData();
-  if (masterOk) renderBuildingOptions(document.getElementById('hBuilding'), 'ทุกพื้นที่/อาคาร', true);
+  await fetchMasterData();
+  if (!verifyState.shift) verifyState.shift = detectCurrentShift();
+  renderVerifyBuildingPills();
+  renderVerifyShiftPills();
   try {
-    const dateFilter = document.getElementById('hDate').value;
-    const buildingFilter = document.getElementById('hBuilding').value;
     const url = new URL(CONFIG.webAppUrl);
     url.searchParams.set('token', CONFIG.token);
-    url.searchParams.set('limit', '100');
-    if (dateFilter) url.searchParams.set('date', dateFilter);
+    url.searchParams.set('date', verifyState.date);
     url.searchParams.set('_', Date.now()); // กันเบราว์เซอร์/Google แคชผลลัพธ์เก่า
     const res = await fetch(url.toString(), { cache: 'no-store' });
     const data = await res.json();
@@ -1073,29 +1234,109 @@ async function loadHistory(){
       container.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่สำเร็จ: ' + (data.message || '') + '</div>';
       return;
     }
-    let rows = data.rows;
-    if (buildingFilter) rows = rows.filter(r => r.building === buildingFilter);
-    if (!rows.length) {
-      container.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูลตามเงื่อนไขที่เลือก</div>';
-      return;
-    }
-    container.innerHTML = rows.map(r => (
-      '<div class="history-card">' +
-        '<div class="top"><div><div class="title">' + escapeHtml_(r.upsName) + '</div>' +
-        '<div class="sub">' + escapeHtml_(r.building) + ' • ' + escapeHtml_(r.date) + ' • ' + escapeHtml_(r.shift) + '</div></div>' +
-        '<span class="badge ' + (r.visualCheck === 'ปกติ' ? 'done' : 'pending') + '">' + escapeHtml_(r.visualCheck) + '</span></div>' +
-        '<div class="grid">' +
-          '<div><span>S/N: </span>' + escapeHtml_(r.serial || '-') + '</div>' +
-          '<div><span>ผู้ตรวจ: </span>' + escapeHtml_(r.signature || '-') + '</div>' +
-          '<div><span>Input: </span>' + escapeHtml_(r.inputV) + ' V</div>' +
-          '<div><span>Output: </span>' + escapeHtml_(r.outputV) + ' V</div>' +
-        '</div>' +
-        (r.remarks ? '<div class="remarks">' + escapeHtml_(r.remarks) + '</div>' : '') +
-        (r.photoUrl ? '<div style="margin-top:8px;"><a href="' + escapeHtml_(r.photoUrl) + '" target="_blank" rel="noopener" style="color:var(--blue); font-weight:600; font-size:12.5px; text-decoration:none;">📷 ดูรูปถ่ายหน้างาน</a></div>' : '') +
-      '</div>'
-    )).join('');
+    verifyRowsCache = data.rows;
+    renderVerifyList();
   } catch (err) {
     container.innerHTML = '<div class="empty-state">เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่</div>';
+  }
+}
+
+// เปิดหน้ารายละเอียด (ดูอย่างเดียว) ของแถวที่แตะเข้ามา — rowIndex มาจาก data-rowindex ของการ์ดที่แตะ
+function openVerifyDetail(rowIndex){
+  const row = (verifyRowsCache || []).find(r => String(r.rowIndex) === String(rowIndex));
+  if (!row) return;
+  verifyCurrentRow = row;
+
+  const visualOk = row.visualCheck === 'ปกติ';
+  const fields = [
+    ['พื้นที่/อาคาร', row.building],
+    ['ชื่อ UPS / สถานที่ติดตั้ง', row.upsName],
+    ['S/N ของ UPS', row.serial || '-'],
+    ['วันที่ตรวจ', formatThaiDate(row.date)],
+    ['กะการทำงาน', row.shift],
+    ['ผลตรวจ VISUAL CHECK', (visualOk ? '✓ ปกติ' : '✕ ไม่ปกติ')],
+    ['INPUT (V)', row.inputV + ' V'],
+    ['OUTPUT (V)', row.outputV + ' V'],
+    ['ผู้ตรวจเช็ค (พนักงาน)', row.signature || '-'],
+    ['หมายเหตุ', row.remarks || '-']
+  ];
+  document.getElementById('verifyDetailGrid').innerHTML = fields.map(f =>
+    '<div class="ro-field"><div class="ro-label">' + escapeHtml_(f[0]) + '</div><div class="ro-value">' + escapeHtml_(String(f[1])) + '</div></div>'
+  ).join('');
+
+  const photoWrap = document.getElementById('verifyPhotoWrap');
+  if (row.photoUrl) {
+    photoWrap.innerHTML = '<label>รูปถ่ายหน้างาน</label>' +
+      '<a href="' + escapeHtml_(row.photoUrl) + '" target="_blank" rel="noopener">' +
+      '<img src="' + escapeHtml_(row.photoUrl) + '" style="width:100%;border-radius:10px;border:1px solid var(--border);display:block;">' +
+      '</a>';
+  } else {
+    photoWrap.innerHTML = '<label>รูปถ่ายหน้างาน</label><div class="hint-small">ไม่มีรูปถ่ายแนบมา</div>';
+  }
+
+  const noteEl = document.getElementById('verifyAlreadyNote');
+  if (row.verifiedBy) {
+    noteEl.style.display = 'block';
+    noteEl.textContent = '✓ ตรวจสอบแล้วโดย ' + row.verifiedBy + (row.verifiedAt ? (' เมื่อ ' + new Date(row.verifiedAt).toLocaleString('th-TH')) : '') + ' — ยืนยันซ้ำได้ถ้าต้องการแก้ชื่อผู้ตรวจสอบ';
+  } else {
+    noteEl.style.display = 'none';
+  }
+  document.getElementById('verifierName').value = row.verifiedBy || '';
+  setVerifyStatus(null, '');
+
+  document.getElementById('verifyListWrap').style.display = 'none';
+  document.getElementById('verifyDetailWrap').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function closeVerifyDetail(){
+  verifyCurrentRow = null;
+  document.getElementById('verifyDetailWrap').style.display = 'none';
+  document.getElementById('verifyListWrap').style.display = '';
+}
+
+function setVerifyStatus(type, text){
+  const el = document.getElementById('verifyStatusMsg');
+  el.className = 'status-msg' + (type ? ' ' + type : '');
+  el.textContent = text || '';
+}
+
+// บันทึกการยืนยันของหัวหน้าชุด — อัปเดตแถวเดิมของพนักงานในชีต (ไม่สร้างแถวใหม่)
+async function submitVerify(){
+  if (!verifyCurrentRow) return;
+  const verifierName = document.getElementById('verifierName').value.trim();
+  if (!verifierName) return setVerifyStatus('err', 'กรุณาใส่ชื่อหัวหน้าชุดผู้ตรวจสอบ');
+  if (!isConfigured()) return setVerifyStatus('err', 'ยังไม่ได้ตั้งค่า Web App URL');
+
+  const btn = document.getElementById('verifyConfirmBtn');
+  btn.disabled = true;
+  setVerifyStatus('loading', 'กำลังบันทึก...');
+  try {
+    const res = await fetch(CONFIG.webAppUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        token: CONFIG.token,
+        mode: 'verify',
+        rowIndex: verifyCurrentRow.rowIndex,
+        building: verifyCurrentRow.building,
+        upsName: verifyCurrentRow.upsName,
+        date: verifyCurrentRow.date,
+        shift: verifyCurrentRow.shift,
+        verifiedBy: verifierName
+      })
+    });
+    const data = await res.json();
+    if (data.result === 'success') {
+      setVerifyStatus('ok', '✓ บันทึกการตรวจสอบเรียบร้อยแล้ว');
+      setTimeout(() => { closeVerifyDetail(); loadVerify(); }, 1200);
+    } else {
+      setVerifyStatus('err', 'บันทึกไม่สำเร็จ: ' + (data.message || 'ไม่ทราบสาเหตุ'));
+    }
+  } catch (err) {
+    setVerifyStatus('err', 'เชื่อมต่อไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+  } finally {
+    btn.disabled = false;
   }
 }
 </script>
