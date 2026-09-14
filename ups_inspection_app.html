@@ -525,7 +525,7 @@
           <div id="verifyStatusMsg" class="status-msg"></div>
           <div class="btnbar" style="margin-top:14px;">
             <button class="btn-cancel" onclick="closeVerifyDetail()">ยกเลิก</button>
-            <button class="btn-submit" id="verifyConfirmBtn" onclick="submitVerify()">ยืนยันข้อมูลการตรวจสอบ</button>
+            <button class="btn-submit" id="verifyConfirmBtn" onclick="submitVerify()">ยืนยันการตรวจสอบ</button>
           </div>
         </div>
       </div>
@@ -1195,7 +1195,8 @@ function renderVerifyList(){
           (showBuildingTag ? '<div class="check-sub">' + escapeHtml_(b) + '</div>' : '') +
           '</div><span class="badge none">ยังไม่มีข้อมูล</span></div>';
       } else if (row.verifiedBy) {
-        html += '<div class="check-card done clickable" data-rowindex="' + row.rowIndex + '"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
+        // ตรวจสอบแล้ว — แสดงผลอย่างเดียว แตะเข้าไปดู/ยืนยันซ้ำไม่ได้อีก (ล็อกผลไว้ไม่ให้แก้ไขหลังยืนยัน)
+        html += '<div class="check-card done"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
           '<div class="check-sub">' + (showBuildingTag ? escapeHtml_(b) + ' • ' : '') + escapeHtml_(shift) + '</div></div>' +
           '<span class="badge done">✓ ตรวจสอบแล้ว</span></div>';
       } else {
