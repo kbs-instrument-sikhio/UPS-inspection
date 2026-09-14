@@ -16,6 +16,7 @@
     --ok:#1f9d55;
     --bad:#d64545;
     --border:#e3e7f1;
+    --brand:#123c3a;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -34,23 +35,42 @@
     position:relative;
   }
   header.topbar{
-    background:var(--card);
-    padding:16px 18px 14px;
-    border-bottom:1px solid var(--border);
+    background:linear-gradient(135deg,#123c3a,#1b5c56);
+    color:#fff;
+    padding:16px 16px 20px;
+    border-bottom:none;
+    border-radius:0 0 22px 22px;
     position:sticky;
     top:0;
     z-index:5;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  header.topbar .topbar-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+  header.topbar .topbar-icon{
+    width:34px;height:34px;border-radius:10px;flex:none;
+    background:rgba(255,255,255,.16);
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;
   }
   header.topbar h1{
-    font-size:18px;
+    font-size:15px;
     margin:0;
     font-weight:700;
+    line-height:1.35;
   }
-  header.topbar p{
-    margin:2px 0 0;
-    font-size:12.5px;
-    color:var(--muted);
+  header.topbar .btn-refresh-icon{
+    width:34px;height:34px;border-radius:10px;flex:none;
+    background:rgba(255,255,255,.16);
+    border:none;color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
   }
+  header.topbar .btn-refresh-icon svg{ width:18px;height:18px; }
+  header.topbar .btn-refresh-icon.spin svg{ animation:spin_ .7s linear; }
+  @keyframes spin_{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
   .setup-banner{
     margin:12px 16px 0;
     background:#fff4e0;
@@ -205,6 +225,63 @@
   .badge.done{ background:#e7f7ec; color:var(--ok); }
   .badge.pending{ background:#fdeceb; color:var(--bad); }
 
+  /* ===== วันนี้: แถบวันที่ / การ์ดสรุป / ปุ่มกรองอาคาร-กะ / รายการเช็ค ===== */
+  .today-date-row{
+    display:flex; align-items:center; gap:6px;
+    font-size:13px; font-weight:600; color:var(--muted);
+    margin:14px 2px 12px;
+  }
+  .stat-row{ display:flex; gap:10px; margin-bottom:14px; }
+  .stat-box{
+    flex:1; min-width:0; border-radius:14px; padding:13px 14px;
+    display:flex; flex-direction:column; gap:8px;
+    border:1px solid var(--border); background:var(--card);
+  }
+  .stat-box .stat-top{ display:flex; align-items:center; gap:8px; }
+  .stat-box .stat-icon{
+    width:24px;height:24px;border-radius:8px;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px; font-weight:800;
+  }
+  .stat-box.done .stat-icon{ background:#e7f7ec; color:var(--ok); }
+  .stat-box.pending .stat-icon{ background:#fdeceb; color:var(--bad); }
+  .stat-box .stat-label{ font-size:12.5px; color:var(--muted); font-weight:700; }
+  .stat-box .stat-value{ font-size:23px; font-weight:800; line-height:1; }
+  .stat-box.done .stat-value{ color:var(--ok); }
+  .stat-box.pending .stat-value{ color:var(--bad); }
+
+  .pill-row{
+    display:flex; gap:8px; overflow-x:auto; padding:1px 1px 3px;
+    margin-bottom:10px; -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .pill-row::-webkit-scrollbar{ display:none; }
+  .pill{
+    flex:none; font-family:inherit; font-size:12.5px; font-weight:700;
+    padding:8px 14px; border-radius:20px;
+    background:var(--field); border:1px solid var(--border); color:var(--text);
+    white-space:nowrap; cursor:pointer;
+  }
+  .pill.active{ background:var(--brand,#123c3a); border-color:var(--brand,#123c3a); color:#fff; }
+  .pill.shift-pill.active{ background:#1b5c56; border-color:#1b5c56; }
+
+  .check-card{
+    display:flex; align-items:center; gap:10px;
+    border-radius:14px; padding:12px 13px; margin-bottom:9px;
+    border:1px solid var(--border); background:var(--card);
+  }
+  .check-card.pending{ background:#fdeceb; border-color:#f5cac6; }
+  .check-card.clickable{ cursor:pointer; -webkit-tap-highlight-color:rgba(214,69,69,0.15); }
+  .check-card.clickable:active{ opacity:.8; }
+  .check-card .check-icon{
+    width:34px;height:34px;border-radius:10px;flex:none;
+    background:#fff; color:var(--bad); border:1px solid #f5cac6;
+    display:flex;align-items:center;justify-content:center;font-size:15px;
+  }
+  .check-card .check-meta{ flex:1; min-width:0; }
+  .check-card .check-name{ font-size:13.5px; font-weight:700; }
+  .check-card .check-sub{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .check-card .badge{ flex:none; }
+
   .history-card{
     background:var(--card); border:1px solid var(--border); border-radius:12px;
     padding:13px; margin-bottom:10px;
@@ -238,8 +315,13 @@
 <div id="app">
 
   <header class="topbar">
-    <h1>ตรวจเช็ค UPS ประจำวัน</h1>
-    <p>บันทึกผลตรวจ 2 กะการทำงาน — ข้อมูลจะถูกส่งไปยัง Google Sheet</p>
+    <div class="topbar-left">
+      <span class="topbar-icon">⚡</span>
+      <h1>ระบบตรวจเช็ค UPS ประจำวัน แผนกเครื่องมือวัด</h1>
+    </div>
+    <button type="button" class="btn-refresh-icon" id="btnRefreshTop" onclick="refreshCurrentView()" aria-label="รีเฟรช">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    </button>
   </header>
   <div id="setupBanner" class="setup-banner" style="display:none;">
     ⚠️ ยังไม่ได้ตั้งค่า Web App URL ของ Google Sheet — เปิดไฟล์นี้ด้วยโปรแกรมแก้ไขข้อความ แล้วแก้ค่า <code>webAppUrl</code> และ <code>token</code> ในส่วน CONFIG ด้านบนของไฟล์ (ดูวิธีทำในคู่มือติดตั้ง.md)
@@ -249,12 +331,24 @@
 
     <!-- ===== TODAY VIEW ===== -->
     <section id="view-today" class="view active">
-      <div class="view-header">
-        <h2>สรุปวันนี้</h2>
-        <button class="btn-refresh" onclick="loadToday()">รีเฟรช</button>
+      <div id="todayDate" class="today-date-row"></div>
+
+      <div class="stat-row">
+        <div class="stat-box done">
+          <div class="stat-top"><span class="stat-icon">✓</span><span class="stat-label">ตรวจแล้ว</span></div>
+          <div class="stat-value" id="statDoneValue">0/0</div>
+        </div>
+        <div class="stat-box pending">
+          <div class="stat-top"><span class="stat-icon">!</span><span class="stat-label">คงเหลือ</span></div>
+          <div class="stat-value" id="statPendingValue">0</div>
+        </div>
       </div>
-      <div id="todayDate" class="hint-small" style="margin-bottom:2px;"></div>
-      <div class="hint-small" style="margin-bottom:10px;">แตะรายการที่ยัง "ยังไม่ตรวจ" เพื่อไปกรอกข้อมูลของ UPS ตัวนั้นได้ทันที</div>
+
+      <div class="pill-row" id="buildingPills"></div>
+      <div class="pill-row" id="shiftPills"></div>
+
+      <div class="hint-small" style="margin:0 2px 10px;">แตะรายการที่ "ยังไม่ตรวจ" เพื่อไปกรอกข้อมูลของ UPS ตัวนั้นได้ทันที</div>
+
       <div id="todayContent"><div class="empty-state">กำลังโหลด...</div></div>
     </section>
 
@@ -370,7 +464,7 @@
 
   <nav class="bottomnav">
     <button id="nav-today" class="active" onclick="showView('today')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8.5 14.5l2 2 4-4"/></svg>
       วันนี้
     </button>
     <button id="nav-form" onclick="showView('form')">
@@ -410,6 +504,34 @@ function todayStr(){
   const tz = d.getTimezoneOffset() * 60000;
   return new Date(d - tz).toISOString().slice(0,10);
 }
+
+const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const THAI_WEEKDAYS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+function formatThaiDate(dstr){
+  const d = new Date(dstr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dstr;
+  return d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' (' + THAI_WEEKDAYS[d.getDay()] + ')';
+}
+
+// เดาว่าตอนนี้อยู่ในกะไหน โดยอ่านช่วงเวลา "HH.MM - HH.MM" ที่ฝังอยู่ในชื่อกะ (CONFIG.shifts)
+// รองรับกะข้ามคืน (เช่น 20.00 - 08.00) — ใช้เป็นค่าเริ่มต้นของตัวกรองกะในแท็บ "วันนี้" เท่านั้น
+// ผู้ใช้ยังสามารถแตะเปลี่ยนไปดูอีกกะได้ตามปกติ
+function detectCurrentShift(){
+  const mins = new Date().getHours() * 60 + new Date().getMinutes();
+  for (const s of CONFIG.shifts) {
+    const m = /(\d{1,2})[.:](\d{2})\s*-\s*(\d{1,2})[.:](\d{2})/.exec(s);
+    if (!m) continue;
+    const start = (+m[1]) * 60 + (+m[2]);
+    const end = (+m[3]) * 60 + (+m[4]);
+    if (start <= end) { if (mins >= start && mins < end) return s; }
+    else { if (mins >= start || mins < end) return s; }
+  }
+  return CONFIG.shifts[0] || '';
+}
+
+/* uiState: ตัวกรองที่เลือกอยู่ในแท็บ "วันนี้" — building='' หมายถึง "ทั้งหมด" */
+let uiState = { building: '', shift: '' };
+let todayRowsCache = null; // แคชผลตรวจของวันนี้ล่าสุดที่ดึงมา ใช้เรนเดอร์ซ้ำตอนแตะเปลี่ยนตัวกรองโดยไม่ต้องดึงข้อมูลใหม่
 
 /* ---------- master data (พื้นที่/อาคาร, ชื่อ UPS, S/N) ---------- */
 // MASTER.list: [{building, upsName, serial}, ...]
@@ -485,8 +607,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('fDate').value = todayStr();
-  document.getElementById('todayDate').textContent = 'วันที่ ' + todayStr();
+  document.getElementById('todayDate').innerHTML = '📅 วันที่: ' + formatThaiDate(todayStr());
   onVisualChange(); // VISUAL CHECK เริ่มต้นแบบไม่ติ๊ก ให้ผู้ใช้ติ๊กเอง จึงตั้งป้ายหมายเหตุให้ตรงสถานะเริ่มต้น
+  uiState.shift = detectCurrentShift(); // ตั้งค่ากะเริ่มต้นตามเวลาปัจจุบัน (แตะเปลี่ยนเองได้)
 
   loadMasterData();
   loadToday(); // หน้าเริ่มต้นของแอปคือแท็บ "วันนี้" จึงโหลดข้อมูลทันทีตั้งแต่เปิดแอป
@@ -494,9 +617,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // แตะรายการ "ยังไม่ตรวจ" ในแท็บวันนี้ เพื่อกระโดดไปหน้ากรอกข้อมูล พร้อมเลือก
   // พื้นที่/อาคาร, ชื่อ UPS และ S/N ให้อัตโนมัติตามรายการที่แตะ
   document.getElementById('todayContent').addEventListener('click', function (e) {
-    const item = e.target.closest('.checklist-item.clickable');
+    const item = e.target.closest('.check-card.clickable');
     if (!item) return;
     goToForm(item.dataset.building, item.dataset.ups, item.dataset.serial, item.dataset.shift);
+  });
+
+  // แตะปุ่มกรอง "พื้นที่/อาคาร" หรือ "กะการทำงาน" ในแท็บวันนี้ — เรนเดอร์ใหม่จากข้อมูลที่แคชไว้
+  // (ไม่ต้องดึงข้อมูลใหม่จากเซิร์ฟเวอร์ จึงเปลี่ยนตัวกรองได้ทันที)
+  document.getElementById('buildingPills').addEventListener('click', function (e) {
+    const btn = e.target.closest('.pill'); if (!btn) return;
+    uiState.building = btn.dataset.building || '';
+    renderTodayList();
+  });
+  document.getElementById('shiftPills').addEventListener('click', function (e) {
+    const btn = e.target.closest('.pill'); if (!btn) return;
+    uiState.shift = btn.dataset.shift || '';
+    renderTodayList();
   });
 });
 
@@ -663,6 +799,18 @@ function showView(name){
   if (name === 'history') loadHistory();
 }
 
+// ปุ่มรีเฟรชวงกลมที่หัวแอป — รีเฟรชเฉพาะแท็บที่กำลังเปิดอยู่
+function refreshCurrentView(){
+  const btn = document.getElementById('btnRefreshTop');
+  btn.classList.add('spin');
+  const done = () => btn.classList.remove('spin');
+  let task;
+  if (document.getElementById('view-today').classList.contains('active')) task = loadToday();
+  else if (document.getElementById('view-history').classList.contains('active')) task = loadHistory();
+  else task = loadMasterData();
+  Promise.resolve(task).finally(done);
+}
+
 /* ---------- form submit ---------- */
 function setStatus(type, text){
   const el = document.getElementById('statusMsg');
@@ -743,15 +891,94 @@ async function submitForm(){
 }
 
 /* ---------- today view ---------- */
+
+// นับจำนวน "ตรวจแล้ว/ทั้งหมด" ของกะที่ระบุ (นับรวมทุกอาคาร ไม่ขึ้นกับตัวกรองอาคารที่เลือกอยู่
+// เพื่อให้ตัวเลขสรุปด้านบนคงที่ ไม่กระโดดตามการกรองอาคารที่ใช้แค่ดูรายการ)
+function computeStatsForShift(shift){
+  const doneSet = new Set((todayRowsCache || []).map(r => String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()));
+  let total = 0, done = 0;
+  Object.keys(MASTER.byBuilding).forEach(b => {
+    MASTER.byBuilding[b].forEach(u => {
+      total++;
+      if (doneSet.has(b.trim() + '|' + u.upsName.trim() + '|' + shift.trim())) done++;
+    });
+  });
+  return { total, done };
+}
+
+function renderBuildingPills(){
+  const wrap = document.getElementById('buildingPills');
+  const buildings = Object.keys(MASTER.byBuilding);
+  let html = '<button type="button" class="pill' + (uiState.building === '' ? ' active' : '') + '" data-building="">ทั้งหมด</button>';
+  buildings.forEach(b => {
+    html += '<button type="button" class="pill' + (uiState.building === b ? ' active' : '') + '" data-building="' + escapeHtml_(b) + '">' + escapeHtml_(b) + '</button>';
+  });
+  wrap.innerHTML = html;
+}
+
+function renderShiftPills(){
+  const wrap = document.getElementById('shiftPills');
+  let html = '';
+  CONFIG.shifts.forEach(s => {
+    html += '<button type="button" class="pill shift-pill' + (uiState.shift === s ? ' active' : '') + '" data-shift="' + escapeHtml_(s) + '">' + escapeHtml_(s) + '</button>';
+  });
+  wrap.innerHTML = html;
+}
+
+// เรนเดอร์แท็บ "วันนี้" ทั้งหมด (สรุปตัวเลข + ปุ่มกรอง + รายการ) จากข้อมูลที่แคชไว้ใน todayRowsCache
+// เรียกใช้ทุกครั้งที่แตะเปลี่ยนตัวกรองอาคาร/กะ โดยไม่ต้องดึงข้อมูลใหม่จากเซิร์ฟเวอร์
+function renderTodayList(){
+  renderBuildingPills();
+  renderShiftPills();
+
+  const container = document.getElementById('todayContent');
+  if (!todayRowsCache) return;
+
+  const shift = uiState.shift || CONFIG.shifts[0] || '';
+  const stats = computeStatsForShift(shift);
+  document.getElementById('statDoneValue').textContent = stats.done + '/' + stats.total;
+  document.getElementById('statPendingValue').textContent = String(stats.total - stats.done);
+
+  const doneSet = new Set(todayRowsCache.map(r => String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()));
+  const buildingsToShow = uiState.building ? [uiState.building] : Object.keys(MASTER.byBuilding);
+  const showBuildingTag = !uiState.building; // ถ้ากรองอาคารแล้วไม่ต้องซ้ำชื่ออาคารในแต่ละรายการ
+
+  let html = '';
+  buildingsToShow.forEach(b => {
+    (MASTER.byBuilding[b] || []).forEach(u => {
+      const isDone = doneSet.has(b.trim() + '|' + u.upsName.trim() + '|' + shift.trim());
+      if (isDone) {
+        html += '<div class="check-card done"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
+          '<div class="check-sub">' + (showBuildingTag ? escapeHtml_(b) + ' • ' : '') + escapeHtml_(shift) + '</div></div>' +
+          '<span class="badge done">✓ ตรวจแล้ว</span></div>';
+      } else {
+        const attrs = ' data-building="' + escapeHtml_(b) + '"' +
+          ' data-ups="' + escapeHtml_(u.upsName) + '"' +
+          ' data-serial="' + escapeHtml_(u.serial || '') + '"' +
+          ' data-shift="' + escapeHtml_(shift) + '"';
+        html += '<div class="check-card pending clickable"' + attrs + '>' +
+          '<div class="check-icon">🏢</div>' +
+          '<div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
+          (showBuildingTag ? '<div class="check-sub">' + escapeHtml_(b) + '</div>' : '') +
+          '</div><span class="badge pending">⚠ ยังไม่ตรวจ</span></div>';
+      }
+    });
+  });
+  container.innerHTML = html || '<div class="empty-state">ยังไม่มีรายชื่อ UPS ในชีตต้นแบบ (หรืออาคารที่เลือกไม่มี UPS)</div>';
+}
+
 async function loadToday(){
   const container = document.getElementById('todayContent');
-  document.getElementById('todayDate').textContent = 'วันที่ ' + todayStr();
+  document.getElementById('todayDate').innerHTML = '📅 วันที่: ' + formatThaiDate(todayStr());
   if (!isConfigured()) {
     container.innerHTML = '<div class="empty-state">ยังไม่ได้ตั้งค่า Web App URL — ดูคู่มือติดตั้ง.md</div>';
     return;
   }
   container.innerHTML = '<div class="empty-state">กำลังโหลด...</div>';
   await fetchMasterData(); // ดึงรายชื่อ UPS ล่าสุดจากชีตต้นแบบทุกครั้งที่เปิด/รีเฟรชแท็บนี้
+  if (!uiState.shift) uiState.shift = detectCurrentShift();
+  renderBuildingPills();
+  renderShiftPills();
   try {
     const url = new URL(CONFIG.webAppUrl);
     url.searchParams.set('token', CONFIG.token);
@@ -763,25 +990,8 @@ async function loadToday(){
       container.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่สำเร็จ: ' + (data.message || '') + '</div>';
       return;
     }
-    const done = new Set(data.rows.map(r => String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()));
-    let html = '';
-    Object.keys(MASTER.byBuilding).forEach(building => {
-      html += '<div class="group-title">' + escapeHtml_(building) + '</div>';
-      MASTER.byBuilding[building].forEach(u => {
-        CONFIG.shifts.forEach(shift => {
-          const isDone = done.has(building.trim() + '|' + u.upsName.trim() + '|' + shift.trim());
-          const attrs = isDone ? '' :
-            ' data-building="' + escapeHtml_(building) + '"' +
-            ' data-ups="' + escapeHtml_(u.upsName) + '"' +
-            ' data-serial="' + escapeHtml_(u.serial || '') + '"' +
-            ' data-shift="' + escapeHtml_(shift) + '"';
-          html += '<div class="checklist-item' + (isDone ? '' : ' clickable') + '"' + attrs + '><div class="meta"><div class="name">' + escapeHtml_(u.upsName) +
-            '</div><div class="shift">' + escapeHtml_(shift) + '</div></div><span class="badge ' +
-            (isDone ? 'done">ตรวจแล้ว' : 'pending">ยังไม่ตรวจ') + '</span></div>';
-        });
-      });
-    });
-    container.innerHTML = html || '<div class="empty-state">ยังไม่มีรายชื่อ UPS ในชีตต้นแบบ</div>';
+    todayRowsCache = data.rows;
+    renderTodayList();
   } catch (err) {
     container.innerHTML = '<div class="empty-state">เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่</div>';
   }
