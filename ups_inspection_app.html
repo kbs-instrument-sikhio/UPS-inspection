@@ -54,6 +54,10 @@
     background:rgba(255,255,255,.16);
     display:flex;align-items:center;justify-content:center;
     font-size:17px;
+    overflow:hidden;
+  }
+  header.topbar .topbar-icon-img{
+    width:100%;height:100%;object-fit:cover;display:block;
   }
   header.topbar h1{
     font-size:15px;
@@ -227,9 +231,23 @@
 
   /* ===== วันนี้: แถบวันที่ / การ์ดสรุป / ปุ่มกรองอาคาร-กะ / รายการเช็ค ===== */
   .today-date-row{
-    display:flex; align-items:center; gap:6px;
-    font-size:13px; font-weight:600; color:var(--muted);
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
     margin:14px 2px 12px;
+  }
+  .today-date-picker{
+    position:relative; display:flex; align-items:center; gap:6px;
+    font-size:13px; font-weight:600; color:var(--muted);
+    cursor:pointer;
+  }
+  .today-date-picker .chevron{ font-size:10px; color:var(--muted); }
+  .today-date-picker input[type=date]{
+    position:absolute; inset:0; width:100%; height:100%;
+    opacity:0; border:none; padding:0; margin:0; cursor:pointer;
+  }
+  .btn-today-jump{
+    flex:none; font-size:11.5px; font-weight:700; color:var(--blue);
+    background:#eef2fe; border:1px solid #d6e0fb; border-radius:20px;
+    padding:6px 11px; cursor:pointer; font-family:inherit;
   }
   .stat-row{ display:flex; gap:10px; margin-bottom:14px; }
   .stat-box{
@@ -316,8 +334,8 @@
 
   <header class="topbar">
     <div class="topbar-left">
-      <span class="topbar-icon">⚡</span>
-      <h1>ระบบตรวจเช็ค UPS ประจำวัน แผนกเครื่องมือวัด</h1>
+      <span class="topbar-icon"><img src="data:image/jpeg;base64,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" alt="โลโก้แผนก" class="topbar-icon-img"></span>
+      <h1>ระบบตรวจเช็ค UPS ประจำวัน</h1>
     </div>
     <button type="button" class="btn-refresh-icon" id="btnRefreshTop" onclick="refreshCurrentView()" aria-label="รีเฟรช">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
@@ -331,7 +349,14 @@
 
     <!-- ===== TODAY VIEW ===== -->
     <section id="view-today" class="view active">
-      <div id="todayDate" class="today-date-row"></div>
+      <div class="today-date-row">
+        <div class="today-date-picker">
+          <span id="todayDateText">📅 วันที่: ...</span>
+          <span class="chevron">▾</span>
+          <input type="date" id="todayDateInput" onchange="onTodayDateChange()">
+        </div>
+        <button type="button" class="btn-today-jump" id="btnJumpToday" style="display:none;" onclick="jumpToToday()">กลับไปวันนี้</button>
+      </div>
 
       <div class="stat-row">
         <div class="stat-box done">
@@ -531,7 +556,32 @@ function detectCurrentShift(){
 
 /* uiState: ตัวกรองที่เลือกอยู่ในแท็บ "วันนี้" — building='' หมายถึง "ทั้งหมด" */
 let uiState = { building: '', shift: '' };
-let todayRowsCache = null; // แคชผลตรวจของวันนี้ล่าสุดที่ดึงมา ใช้เรนเดอร์ซ้ำตอนแตะเปลี่ยนตัวกรองโดยไม่ต้องดึงข้อมูลใหม่
+let todayRowsCache = null; // แคชผลตรวจของวันที่กำลังดูอยู่ (selectedDate) ที่ดึงมาล่าสุด ใช้เรนเดอร์ซ้ำตอนแตะเปลี่ยนตัวกรองโดยไม่ต้องดึงข้อมูลใหม่
+let selectedDate = todayStr(); // วันที่กำลังดูอยู่ในแท็บ "วันนี้" — ค่าเริ่มต้นคือวันนี้จริงๆ แต่แตะแถบวันที่เพื่อดูวันอื่นได้
+
+// อัปเดตข้อความวันที่แบบไทย + ปุ่ม "กลับไปวันนี้" (โผล่มาเมื่อกำลังดูวันอื่นที่ไม่ใช่วันนี้จริง)
+function updateTodayDateLabel(){
+  document.getElementById('todayDateText').textContent = '📅 วันที่: ' + formatThaiDate(selectedDate);
+  const input = document.getElementById('todayDateInput');
+  input.max = todayStr(); // เลือกดูวันที่ล่วงหน้าไม่ได้ (ยังไม่มีผลตรวจให้ดู)
+  input.value = selectedDate;
+  document.getElementById('btnJumpToday').style.display = (selectedDate === todayStr()) ? 'none' : '';
+}
+
+// เมื่อแตะแถบวันที่แล้วเลือกวันที่ใหม่จากตัวเลือกวันที่ของเบราว์เซอร์/มือถือ
+function onTodayDateChange(){
+  const val = document.getElementById('todayDateInput').value;
+  selectedDate = val || todayStr();
+  updateTodayDateLabel();
+  loadToday();
+}
+
+// ปุ่มลัดกลับไปดูวันนี้ (จริง) อีกครั้ง
+function jumpToToday(){
+  selectedDate = todayStr();
+  updateTodayDateLabel();
+  loadToday();
+}
 
 /* ---------- master data (พื้นที่/อาคาร, ชื่อ UPS, S/N) ---------- */
 // MASTER.list: [{building, upsName, serial}, ...]
@@ -607,7 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('fDate').value = todayStr();
-  document.getElementById('todayDate').innerHTML = '📅 วันที่: ' + formatThaiDate(todayStr());
+  updateTodayDateLabel();
   onVisualChange(); // VISUAL CHECK เริ่มต้นแบบไม่ติ๊ก ให้ผู้ใช้ติ๊กเอง จึงตั้งป้ายหมายเหตุให้ตรงสถานะเริ่มต้น
   uiState.shift = detectCurrentShift(); // ตั้งค่ากะเริ่มต้นตามเวลาปัจจุบัน (แตะเปลี่ยนเองได้)
 
@@ -656,6 +706,8 @@ function goToForm(building, upsName, serial, shift){
   document.getElementById('fSerial').value = serial || '';
   const shiftSel = document.getElementById('fShift');
   if (shift) shiftSel.value = shift;
+  // ตั้งวันที่ตรวจในฟอร์มให้ตรงกับวันที่กำลังดูอยู่ในแท็บ "วันนี้" (เผื่อผู้ใช้เลือกดูวันอื่นที่ไม่ใช่วันนี้จริง)
+  document.getElementById('fDate').value = selectedDate;
   // เริ่มค่าผลตรวจใหม่ทั้งหมด ไม่ดึงค่าจากการกรอกครั้งก่อนติดมาด้วย
   document.getElementById('fVisual').checked = false;
   onVisualChange();
@@ -969,7 +1021,7 @@ function renderTodayList(){
 
 async function loadToday(){
   const container = document.getElementById('todayContent');
-  document.getElementById('todayDate').innerHTML = '📅 วันที่: ' + formatThaiDate(todayStr());
+  updateTodayDateLabel();
   if (!isConfigured()) {
     container.innerHTML = '<div class="empty-state">ยังไม่ได้ตั้งค่า Web App URL — ดูคู่มือติดตั้ง.md</div>';
     return;
@@ -982,7 +1034,7 @@ async function loadToday(){
   try {
     const url = new URL(CONFIG.webAppUrl);
     url.searchParams.set('token', CONFIG.token);
-    url.searchParams.set('date', todayStr());
+    url.searchParams.set('date', selectedDate); // ดึงผลตรวจของ "วันที่กำลังดูอยู่" ไม่ใช่วันนี้จริงเสมอไป
     url.searchParams.set('_', Date.now()); // กันเบราว์เซอร์/Google แคชผลลัพธ์เก่า
     const res = await fetch(url.toString(), { cache: 'no-store' });
     const data = await res.json();
