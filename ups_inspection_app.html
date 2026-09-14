@@ -349,32 +349,47 @@
 
     <!-- ===== TODAY VIEW ===== -->
     <section id="view-today" class="view active">
-      <div class="today-date-row">
-        <div class="today-date-picker">
-          <span id="todayDateText">📅 วันที่: ...</span>
-          <span class="chevron">▾</span>
-          <input type="date" id="todayDateInput" onchange="onTodayDateChange()">
+
+      <!-- หน้ารายการ (ค่าเริ่มต้น) -->
+      <div id="todayListWrap">
+        <div class="today-date-row">
+          <div class="today-date-picker">
+            <span id="todayDateText">📅 วันที่: ...</span>
+            <span class="chevron">▾</span>
+            <input type="date" id="todayDateInput" onchange="onTodayDateChange()">
+          </div>
+          <button type="button" class="btn-today-jump" id="btnJumpToday" style="display:none;" onclick="jumpToToday()">กลับไปวันนี้</button>
         </div>
-        <button type="button" class="btn-today-jump" id="btnJumpToday" style="display:none;" onclick="jumpToToday()">กลับไปวันนี้</button>
+
+        <div class="stat-row">
+          <div class="stat-box done">
+            <div class="stat-top"><span class="stat-icon">✓</span><span class="stat-label">ตรวจเช็คแล้ว</span></div>
+            <div class="stat-value" id="statDoneValue">0/0</div>
+          </div>
+          <div class="stat-box pending">
+            <div class="stat-top"><span class="stat-icon">!</span><span class="stat-label">คงเหลือ</span></div>
+            <div class="stat-value" id="statPendingValue">0</div>
+          </div>
+        </div>
+
+        <div class="pill-row" id="buildingPills"></div>
+        <div class="pill-row" id="shiftPills"></div>
+
+        <div class="hint-small" style="margin:0 2px 10px;">แตะรายการ "ยังไม่ตรวจ" เพื่อไปกรอกข้อมูล หรือแตะรายการ "ตรวจเช็คแล้ว" เพื่อดูข้อมูลที่บันทึกไว้ (ดูอย่างเดียว)</div>
+
+        <div id="todayContent"><div class="empty-state">กำลังโหลด...</div></div>
       </div>
 
-      <div class="stat-row">
-        <div class="stat-box done">
-          <div class="stat-top"><span class="stat-icon">✓</span><span class="stat-label">ตรวจแล้ว</span></div>
-          <div class="stat-value" id="statDoneValue">0/0</div>
-        </div>
-        <div class="stat-box pending">
-          <div class="stat-top"><span class="stat-icon">!</span><span class="stat-label">คงเหลือ</span></div>
-          <div class="stat-value" id="statPendingValue">0</div>
+      <!-- หน้ารายละเอียด (ดูอย่างเดียว แก้ไขไม่ได้) — แสดงตอนแตะรายการ "ตรวจเช็คแล้ว" -->
+      <div id="todayDetailWrap" style="display:none;">
+        <button type="button" class="btn-refresh" style="margin-bottom:12px;" onclick="closeTodayDetail()">← กลับไปหน้ารายการ</button>
+        <div class="card">
+          <h2><span class="dot">📋</span> ข้อมูลที่บันทึกไว้ (ดูอย่างเดียว แก้ไขไม่ได้)</h2>
+          <div id="todayDetailGrid"></div>
+          <div class="field" id="todayPhotoWrap" style="margin-top:12px;"></div>
         </div>
       </div>
 
-      <div class="pill-row" id="buildingPills"></div>
-      <div class="pill-row" id="shiftPills"></div>
-
-      <div class="hint-small" style="margin:0 2px 10px;">แตะรายการที่ "ยังไม่ตรวจ" เพื่อไปกรอกข้อมูลของ UPS ตัวนั้นได้ทันที</div>
-
-      <div id="todayContent"><div class="empty-state">กำลังโหลด...</div></div>
     </section>
 
     <!-- ===== FORM VIEW ===== -->
@@ -500,7 +515,7 @@
         <div class="pill-row" id="verifyBuildingPills"></div>
         <div class="pill-row" id="verifyShiftPills"></div>
 
-        <div class="hint-small" style="margin:0 2px 10px;">แตะรายการที่ "รอตรวจสอบ" เพื่อดูผลตรวจของพนักงานแล้วยืนยันการตรวจสอบของหัวหน้าชุด</div>
+        <div class="hint-small" style="margin:0 2px 10px;">แตะรายการที่ "รอตรวจสอบ" เพื่อดูผลตรวจของพนักงานแล้วยืนยัน หรือแตะรายการ "ตรวจสอบแล้ว" เพื่อดูข้อมูลย้อนหลัง (ดูอย่างเดียว)</div>
 
         <div id="verifyContent"><div class="empty-state">กำลังโหลด...</div></div>
       </div>
@@ -516,15 +531,22 @@
         </div>
 
         <div class="card">
-          <h2><span class="dot">✓</span> ยืนยันการตรวจสอบของหัวหน้าชุด</h2>
-          <div id="verifyAlreadyNote" class="hint-small" style="display:none; margin-bottom:10px;"></div>
-          <div class="field">
-            <label>ชื่อหัวหน้าชุดผู้ตรวจสอบ <span class="req">*</span></label>
-            <input type="text" id="verifierName" placeholder="พิมพ์ชื่อผู้ตรวจสอบ">
+          <h2 id="verifyConfirmCardTitle"><span class="dot">✓</span> ยืนยันการตรวจสอบของหัวหน้าชุด</h2>
+
+          <!-- แสดงเมื่อรายการนี้ยืนยันไปแล้ว — ดูอย่างเดียว เปลี่ยนค่า/เปลี่ยนคนตรวจสอบไม่ได้อีก -->
+          <div id="verifyReadonlyInfo" style="display:none;"></div>
+
+          <!-- แสดงเมื่อยังไม่ยืนยัน — กรอกชื่อแล้วยืนยันได้ -->
+          <div id="verifyEditWrap">
+            <div class="field">
+              <label>ชื่อหัวหน้าชุดผู้ตรวจสอบ <span class="req">*</span></label>
+              <input type="text" id="verifierName" placeholder="พิมพ์ชื่อผู้ตรวจสอบ">
+            </div>
+            <div id="verifyStatusMsg" class="status-msg"></div>
           </div>
-          <div id="verifyStatusMsg" class="status-msg"></div>
+
           <div class="btnbar" style="margin-top:14px;">
-            <button class="btn-cancel" onclick="closeVerifyDetail()">ยกเลิก</button>
+            <button class="btn-cancel" id="verifyCancelBtn" onclick="closeVerifyDetail()">ยกเลิก</button>
             <button class="btn-submit" id="verifyConfirmBtn" onclick="submitVerify()">ยืนยันการตรวจสอบ</button>
           </div>
         </div>
@@ -709,11 +731,16 @@ document.addEventListener('DOMContentLoaded', () => {
   loadToday(); // หน้าเริ่มต้นของแอปคือแท็บ "วันนี้" จึงโหลดข้อมูลทันทีตั้งแต่เปิดแอป
 
   // แตะรายการ "ยังไม่ตรวจ" ในแท็บวันนี้ เพื่อกระโดดไปหน้ากรอกข้อมูล พร้อมเลือก
-  // พื้นที่/อาคาร, ชื่อ UPS และ S/N ให้อัตโนมัติตามรายการที่แตะ
+  // พื้นที่/อาคาร, ชื่อ UPS และ S/N ให้อัตโนมัติตามรายการที่แตะ — ส่วนรายการ "ตรวจเช็คแล้ว"
+  // จะเปิดหน้ารายละเอียด (ดูอย่างเดียว) ของข้อมูลที่บันทึกไว้แทน
   document.getElementById('todayContent').addEventListener('click', function (e) {
     const item = e.target.closest('.check-card.clickable');
     if (!item) return;
-    goToForm(item.dataset.building, item.dataset.ups, item.dataset.serial, item.dataset.shift);
+    if (item.classList.contains('pending')) {
+      goToForm(item.dataset.building, item.dataset.ups, item.dataset.serial, item.dataset.shift);
+    } else if (item.classList.contains('done')) {
+      openTodayDetail(item.dataset.rowindex);
+    }
   });
 
   // แตะปุ่มกรอง "พื้นที่/อาคาร" หรือ "กะการทำงาน" ในแท็บวันนี้ — เรนเดอร์ใหม่จากข้อมูลที่แคชไว้
@@ -1052,18 +1079,22 @@ function renderTodayList(){
   document.getElementById('statDoneValue').textContent = stats.done + '/' + stats.total;
   document.getElementById('statPendingValue').textContent = String(stats.total - stats.done);
 
-  const doneSet = new Set(todayRowsCache.map(r => String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()));
+  const rowMap = {}; // key: building|upsName|shift -> แถวผลตรวจล่าสุดที่ตรงกัน (ใช้เปิดดูรายละเอียดตอนแตะรายการที่ตรวจเช็คแล้ว)
+  todayRowsCache.forEach(r => {
+    rowMap[String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()] = r;
+  });
   const buildingsToShow = uiState.building ? [uiState.building] : Object.keys(MASTER.byBuilding);
   const showBuildingTag = !uiState.building; // ถ้ากรองอาคารแล้วไม่ต้องซ้ำชื่ออาคารในแต่ละรายการ
 
   let html = '';
   buildingsToShow.forEach(b => {
     (MASTER.byBuilding[b] || []).forEach(u => {
-      const isDone = doneSet.has(b.trim() + '|' + u.upsName.trim() + '|' + shift.trim());
-      if (isDone) {
-        html += '<div class="check-card done"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
+      const row = rowMap[b.trim() + '|' + u.upsName.trim() + '|' + shift.trim()];
+      if (row) {
+        // ตรวจเช็คแล้ว — แตะเข้าไปดูข้อมูลที่บันทึกไว้ได้ (ดูอย่างเดียว แก้ไขไม่ได้)
+        html += '<div class="check-card done clickable" data-rowindex="' + row.rowIndex + '"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
           '<div class="check-sub">' + (showBuildingTag ? escapeHtml_(b) + ' • ' : '') + escapeHtml_(shift) + '</div></div>' +
-          '<span class="badge done">✓ ตรวจแล้ว</span></div>';
+          '<span class="badge done">✓ ตรวจเช็คแล้ว</span></div>';
       } else {
         const attrs = ' data-building="' + escapeHtml_(b) + '"' +
           ' data-ups="' + escapeHtml_(u.upsName) + '"' +
@@ -1080,7 +1111,50 @@ function renderTodayList(){
   container.innerHTML = html || '<div class="empty-state">ยังไม่มีรายชื่อ UPS ในชีตต้นแบบ (หรืออาคารที่เลือกไม่มี UPS)</div>';
 }
 
+// เปิดหน้ารายละเอียด (ดูอย่างเดียว) ของแถวที่แตะเข้ามาในแท็บ "วันนี้" — rowIndex มาจาก data-rowindex ของการ์ดที่แตะ
+function openTodayDetail(rowIndex){
+  const row = (todayRowsCache || []).find(r => String(r.rowIndex) === String(rowIndex));
+  if (!row) return;
+
+  const visualOk = row.visualCheck === 'ปกติ';
+  const fields = [
+    ['พื้นที่/อาคาร', row.building],
+    ['ชื่อ UPS / สถานที่ติดตั้ง', row.upsName],
+    ['S/N ของ UPS', row.serial || '-'],
+    ['วันที่ตรวจ', formatThaiDate(row.date)],
+    ['กะการทำงาน', row.shift],
+    ['ผลตรวจ VISUAL CHECK', (visualOk ? '✓ ปกติ' : '✕ ไม่ปกติ')],
+    ['INPUT (V)', row.inputV + ' V'],
+    ['OUTPUT (V)', row.outputV + ' V'],
+    ['ผู้ตรวจเช็ค', row.signature || '-'],
+    ['หมายเหตุ', row.remarks || '-']
+  ];
+  document.getElementById('todayDetailGrid').innerHTML = fields.map(f =>
+    '<div class="ro-field"><div class="ro-label">' + escapeHtml_(f[0]) + '</div><div class="ro-value">' + escapeHtml_(String(f[1])) + '</div></div>'
+  ).join('');
+
+  const photoWrap = document.getElementById('todayPhotoWrap');
+  if (row.photoUrl) {
+    photoWrap.innerHTML = '<label>รูปถ่ายหน้างาน</label>' +
+      '<a href="' + escapeHtml_(row.photoUrl) + '" target="_blank" rel="noopener">' +
+      '<img src="' + escapeHtml_(row.photoUrl) + '" style="width:100%;border-radius:10px;border:1px solid var(--border);display:block;">' +
+      '</a>';
+  } else {
+    photoWrap.innerHTML = '<label>รูปถ่ายหน้างาน</label><div class="hint-small">ไม่มีรูปถ่ายแนบมา</div>';
+  }
+
+  document.getElementById('todayListWrap').style.display = 'none';
+  document.getElementById('todayDetailWrap').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function closeTodayDetail(){
+  document.getElementById('todayDetailWrap').style.display = 'none';
+  document.getElementById('todayListWrap').style.display = '';
+}
+
 async function loadToday(){
+  closeTodayDetail(); // สลับแท็บ/รีเฟรชมาใหม่ ให้กลับไปที่หน้ารายการก่อนเสมอ
   const container = document.getElementById('todayContent');
   updateTodayDateLabel();
   if (!isConfigured()) {
@@ -1195,8 +1269,8 @@ function renderVerifyList(){
           (showBuildingTag ? '<div class="check-sub">' + escapeHtml_(b) + '</div>' : '') +
           '</div><span class="badge none">ยังไม่มีข้อมูล</span></div>';
       } else if (row.verifiedBy) {
-        // ตรวจสอบแล้ว — แสดงผลอย่างเดียว แตะเข้าไปดู/ยืนยันซ้ำไม่ได้อีก (ล็อกผลไว้ไม่ให้แก้ไขหลังยืนยัน)
-        html += '<div class="check-card done"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
+        // ตรวจสอบแล้ว — แตะเข้าไปดูข้อมูลได้ แต่เป็นการดูอย่างเดียว (เปลี่ยนค่า/เปลี่ยนคนตรวจสอบไม่ได้อีก)
+        html += '<div class="check-card done clickable" data-rowindex="' + row.rowIndex + '"><div class="check-meta"><div class="check-name">' + escapeHtml_(u.upsName) + '</div>' +
           '<div class="check-sub">' + (showBuildingTag ? escapeHtml_(b) + ' • ' : '') + escapeHtml_(shift) + '</div></div>' +
           '<span class="badge done">✓ ตรวจสอบแล้ว</span></div>';
       } else {
@@ -1275,14 +1349,31 @@ function openVerifyDetail(rowIndex){
     photoWrap.innerHTML = '<label>รูปถ่ายหน้างาน</label><div class="hint-small">ไม่มีรูปถ่ายแนบมา</div>';
   }
 
-  const noteEl = document.getElementById('verifyAlreadyNote');
+  // ถ้ารายการนี้ยืนยันไปแล้ว: โชว์เฉพาะข้อมูลผู้ตรวจสอบแบบดูอย่างเดียว ซ่อนช่องกรอก/ปุ่มยืนยัน
+  // ไปเลย เพื่อไม่ให้เปลี่ยนค่าหรือเปลี่ยนคนตรวจสอบได้อีกหลังยืนยันแล้ว
+  const titleEl = document.getElementById('verifyConfirmCardTitle');
+  const readonlyEl = document.getElementById('verifyReadonlyInfo');
+  const editWrap = document.getElementById('verifyEditWrap');
+  const confirmBtn = document.getElementById('verifyConfirmBtn');
+  const cancelBtn = document.getElementById('verifyCancelBtn');
+
   if (row.verifiedBy) {
-    noteEl.style.display = 'block';
-    noteEl.textContent = '✓ ตรวจสอบแล้วโดย ' + row.verifiedBy + (row.verifiedAt ? (' เมื่อ ' + new Date(row.verifiedAt).toLocaleString('th-TH')) : '') + ' — ยืนยันซ้ำได้ถ้าต้องการแก้ชื่อผู้ตรวจสอบ';
+    titleEl.innerHTML = '<span class="dot">✓</span> ผลการตรวจสอบของหัวหน้าชุด (ดูอย่างเดียว)';
+    readonlyEl.innerHTML =
+      '<div class="ro-field"><div class="ro-label">ผู้ตรวจสอบ (หัวหน้าชุด)</div><div class="ro-value">' + escapeHtml_(row.verifiedBy) + '</div></div>' +
+      '<div class="ro-field"><div class="ro-label">เวลาที่ยืนยันตรวจสอบ</div><div class="ro-value">' + (row.verifiedAt ? escapeHtml_(new Date(row.verifiedAt).toLocaleString('th-TH')) : '-') + '</div></div>';
+    readonlyEl.style.display = '';
+    editWrap.style.display = 'none';
+    confirmBtn.style.display = 'none';
+    cancelBtn.textContent = 'กลับ';
   } else {
-    noteEl.style.display = 'none';
+    titleEl.innerHTML = '<span class="dot">✓</span> ยืนยันการตรวจสอบของหัวหน้าชุด';
+    readonlyEl.style.display = 'none';
+    editWrap.style.display = '';
+    confirmBtn.style.display = '';
+    cancelBtn.textContent = 'ยกเลิก';
+    document.getElementById('verifierName').value = '';
   }
-  document.getElementById('verifierName').value = row.verifiedBy || '';
   setVerifyStatus(null, '');
 
   document.getElementById('verifyListWrap').style.display = 'none';
