@@ -192,6 +192,14 @@
     font-size:12.5px;padding:7px 12px;border-radius:20px;font-weight:600;
   }
 
+  .report-send-box{ margin-bottom:14px; }
+  .btn-report{
+    width:100%; background:var(--brand,#123c3a); color:#fff; border:none;
+    font-size:13.5px; font-weight:700; border-radius:12px; padding:12px 14px;
+    cursor:pointer; font-family:inherit;
+  }
+  .btn-report:disabled{ opacity:.6; }
+
   .status-msg{
     margin-top:12px; padding:10px 12px; border-radius:10px; font-size:13px; display:none;
   }
@@ -514,6 +522,13 @@
 
         <div class="pill-row" id="verifyBuildingPills"></div>
         <div class="pill-row" id="verifyShiftPills"></div>
+
+        <!-- ปุ่มสร้าง+ส่งรายงานมาตรฐาน (F-IN-007) ของเดือนปัจจุบันทางอีเมล — รวมทุก UPS ในไฟล์เดียว
+             โดยจะกรอกข้อมูลลงฟอร์มเฉพาะวัน/กะที่หัวหน้าชุดตรวจสอบ (ยืนยัน) แล้วเท่านั้น -->
+        <div class="report-send-box">
+          <button type="button" class="btn-report" id="btnSendMonthlyReport" onclick="sendMonthlyReport()">📧 ส่งรายงานมาตรฐานประจำเดือนนี้ (Excel)</button>
+          <div id="reportStatusMsg" class="status-msg"></div>
+        </div>
 
         <div class="hint-small" style="margin:0 2px 10px;">แตะรายการที่ "รอตรวจสอบ" เพื่อดูผลตรวจของพนักงานแล้วยืนยัน หรือแตะรายการ "ตรวจสอบแล้ว" เพื่อดูข้อมูลย้อนหลัง (ดูอย่างเดียว)</div>
 
@@ -1162,16 +1177,22 @@ async function loadToday(){
     return;
   }
   container.innerHTML = '<div class="empty-state">กำลังโหลด...</div>';
-  await fetchMasterData(); // ดึงรายชื่อ UPS ล่าสุดจากชีตต้นแบบทุกครั้งที่เปิด/รีเฟรชแท็บนี้
   if (!uiState.shift) uiState.shift = detectCurrentShift();
-  renderBuildingPills();
-  renderShiftPills();
+  // ดึงรายชื่อ UPS ต้นแบบ (mode=master) กับผลตรวจของวันที่เลือก "พร้อมกัน" แทนที่จะรอ
+  // ให้ดึงรายชื่อ UPS เสร็จก่อนแล้วค่อยเริ่มดึงผลตรวจ — mode=master เปิดไฟล์ชีตต้นแบบภายนอก
+  // ซึ่งช้าโดยธรรมชาติ (แก้ที่โค้ดไม่ได้) ถ้ารอทีละอย่างจะยิ่งรวมเวลาช้าซ้อนกันสองต่อ
+  const masterPromise = fetchMasterData().then(() => {
+    renderBuildingPills();
+    renderShiftPills();
+  });
   try {
     const url = new URL(CONFIG.webAppUrl);
     url.searchParams.set('token', CONFIG.token);
     url.searchParams.set('date', selectedDate); // ดึงผลตรวจของ "วันที่กำลังดูอยู่" ไม่ใช่วันนี้จริงเสมอไป
     url.searchParams.set('_', Date.now()); // กันเบราว์เซอร์/Google แคชผลลัพธ์เก่า
-    const res = await fetch(url.toString(), { cache: 'no-store' });
+    const fetchPromise = fetch(url.toString(), { cache: 'no-store' });
+    const results = await Promise.all([masterPromise, fetchPromise]);
+    const res = results[1];
     const data = await res.json();
     if (data.result !== 'success') {
       container.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่สำเร็จ: ' + (data.message || '') + '</div>';
@@ -1294,16 +1315,20 @@ async function loadVerify(){
     return;
   }
   container.innerHTML = '<div class="empty-state">กำลังโหลด...</div>';
-  await fetchMasterData();
   if (!verifyState.shift) verifyState.shift = detectCurrentShift();
-  renderVerifyBuildingPills();
-  renderVerifyShiftPills();
+  // ดึงรายชื่อ UPS ต้นแบบกับผลตรวจของวันที่เลือก "พร้อมกัน" เช่นเดียวกับแท็บ "วันนี้"
+  const masterPromise = fetchMasterData().then(() => {
+    renderVerifyBuildingPills();
+    renderVerifyShiftPills();
+  });
   try {
     const url = new URL(CONFIG.webAppUrl);
     url.searchParams.set('token', CONFIG.token);
     url.searchParams.set('date', verifyState.date);
     url.searchParams.set('_', Date.now()); // กันเบราว์เซอร์/Google แคชผลลัพธ์เก่า
-    const res = await fetch(url.toString(), { cache: 'no-store' });
+    const fetchPromise = fetch(url.toString(), { cache: 'no-store' });
+    const results = await Promise.all([masterPromise, fetchPromise]);
+    const res = results[1];
     const data = await res.json();
     if (data.result !== 'success') {
       container.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่สำเร็จ: ' + (data.message || '') + '</div>';
@@ -1313,6 +1338,45 @@ async function loadVerify(){
     renderVerifyList();
   } catch (err) {
     container.innerHTML = '<div class="empty-state">เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่</div>';
+  }
+}
+
+// ปุ่ม "ส่งรายงานมาตรฐานประจำเดือนนี้ (Excel)" — สั่งให้ Code.gs รวบรวมผลตรวจของเดือนปัจจุบันที่
+// หัวหน้าชุดตรวจสอบ (ยืนยัน) แล้วเท่านั้น กรอกลงฟอร์มมาตรฐาน F-IN-007 (1 ไฟล์ หลายชีต แยกตาม UPS
+// แต่ละเครื่อง) แล้วส่งเป็นไฟล์ Excel แนบไปกับอีเมลที่ตั้งไว้ล่วงหน้าในโค้ด (REPORT_EMAIL_TO)
+async function sendMonthlyReport(){
+  if (!isConfigured()) return;
+  const btn = document.getElementById('btnSendMonthlyReport');
+  const statusEl = document.getElementById('reportStatusMsg');
+  const setReportStatus = (type, text) => {
+    statusEl.className = 'status-msg' + (type ? ' ' + type : '');
+    statusEl.textContent = text || '';
+  };
+
+  btn.disabled = true;
+  setReportStatus('loading', 'กำลังสร้างและส่งรายงาน... (อาจใช้เวลาสักครู่ถ้ามี UPS หลายเครื่อง)');
+  try {
+    const now = new Date();
+    const res = await fetch(CONFIG.webAppUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        token: CONFIG.token,
+        mode: 'sendMonthlyReport',
+        year: now.getFullYear(),
+        month: now.getMonth() + 1 // เดือนปัจจุบันเสมอ (getMonth() นับจาก 0 จึง +1)
+      })
+    });
+    const data = await res.json();
+    if (data.result === 'success') {
+      setReportStatus('ok', '✓ ส่งรายงานไปยังอีเมลที่ตั้งไว้เรียบร้อยแล้ว');
+    } else {
+      setReportStatus('err', 'ส่งรายงานไม่สำเร็จ: ' + (data.message || ''));
+    }
+  } catch (err) {
+    setReportStatus('err', 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
+  } finally {
+    btn.disabled = false;
   }
 }
 
