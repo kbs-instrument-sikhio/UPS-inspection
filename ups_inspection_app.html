@@ -35,7 +35,7 @@
     position:relative;
   }
   header.topbar{
-    background:linear-gradient(135deg,#123c3a,#1b5c56);
+    background:linear-gradient(135deg,#10385c,#1b568a);
     color:#fff;
     padding:16px 16px 20px;
     border-bottom:none;
@@ -1369,7 +1369,7 @@ async function sendMonthlyReport(){
     });
     const data = await res.json();
     if (data.result === 'success') {
-      setReportStatus('ok', '✓ ส่งรายงานไปยังอีเมลที่ตั้งไว้เรียบร้อยแล้ว');
+      setReportStatus('ok', '✓ ส่งรายงานไปยังอีเมลเรียบร้อยแล้ว');
     } else {
       setReportStatus('err', 'ส่งรายงานไม่สำเร็จ: ' + (data.message || ''));
     }
