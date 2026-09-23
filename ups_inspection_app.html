@@ -1047,15 +1047,18 @@ async function submitForm(){
 
 /* ---------- today view ---------- */
 
-// นับจำนวน "ตรวจแล้ว/ทั้งหมด" ของกะที่ระบุ (นับรวมทุกอาคาร ไม่ขึ้นกับตัวกรองอาคารที่เลือกอยู่
-// เพื่อให้ตัวเลขสรุปด้านบนคงที่ ไม่กระโดดตามการกรองอาคารที่ใช้แค่ดูรายการ)
-function computeStatsForShift(shift){
+// นับจำนวน "ตรวจแล้ว/ทั้งหมด" รวมทั้ง 2 กะการทำงาน (นับรวมทุกอาคารด้วย ไม่ขึ้นกับตัวกรองอาคาร/กะ
+// ที่เลือกอยู่ เพื่อให้ตัวเลขสรุปด้านบนคงที่ เป็นภาพรวมทั้งวัน ไม่กระโดดตามตัวกรองที่ใช้แค่ดูรายการ)
+// total = จำนวน UPS ทั้งหมด x 2 กะ, done = จำนวนที่มีคนบันทึกผลตรวจแล้ว (นับทั้ง 2 กะ)
+function computeStatsCombined(){
   const doneSet = new Set((todayRowsCache || []).map(r => String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()));
   let total = 0, done = 0;
   Object.keys(MASTER.byBuilding).forEach(b => {
     MASTER.byBuilding[b].forEach(u => {
-      total++;
-      if (doneSet.has(b.trim() + '|' + u.upsName.trim() + '|' + shift.trim())) done++;
+      CONFIG.shifts.forEach(shift => {
+        total++;
+        if (doneSet.has(b.trim() + '|' + u.upsName.trim() + '|' + shift.trim())) done++;
+      });
     });
   });
   return { total, done };
@@ -1090,7 +1093,7 @@ function renderTodayList(){
   if (!todayRowsCache) return;
 
   const shift = uiState.shift || CONFIG.shifts[0] || '';
-  const stats = computeStatsForShift(shift);
+  const stats = computeStatsCombined();
   document.getElementById('statDoneValue').textContent = stats.done + '/' + stats.total;
   document.getElementById('statPendingValue').textContent = String(stats.total - stats.done);
 
@@ -1264,14 +1267,18 @@ function renderVerifyList(){
     rowMap[String(r.building).trim() + '|' + String(r.upsName).trim() + '|' + String(r.shift).trim()] = r;
   });
 
+  // สรุปตัวเลขด้านบนนับรวมทั้ง 2 กะการทำงาน (และทุกอาคาร) เสมอ ไม่ขึ้นกับตัวกรองที่เลือกอยู่
+  // ส่วนรายการด้านล่างยังกรองตามกะที่เลือกอยู่ (ตัวแปร shift) เหมือนเดิม
   let totalSubmitted = 0, totalVerified = 0;
   Object.keys(MASTER.byBuilding).forEach(b => {
     MASTER.byBuilding[b].forEach(u => {
-      const row = rowMap[b.trim() + '|' + u.upsName.trim() + '|' + shift.trim()];
-      if (row) {
-        totalSubmitted++;
-        if (row.verifiedBy) totalVerified++;
-      }
+      CONFIG.shifts.forEach(sh => {
+        const row = rowMap[b.trim() + '|' + u.upsName.trim() + '|' + sh.trim()];
+        if (row) {
+          totalSubmitted++;
+          if (row.verifiedBy) totalVerified++;
+        }
+      });
     });
   });
   document.getElementById('verifyStatDoneValue').textContent = totalVerified + '/' + totalSubmitted;
